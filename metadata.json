@@ -1,0 +1,7 @@
+{
+  "name": "Copy of VivaMente - Comunidade de Saúde Mental",
+  "description": "Uma plataforma social segura para pessoas com depressão, ansiedade, TDAH e TEA se conectarem, compartilharem experiências e formarem comunidades de apoio mútuo.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
