@@ -38,14 +38,12 @@ const CommentItem: React.FC<{
   comment: Comment, 
   onReply: (commentId: string, content: string) => void,
   onLike: (commentId: string) => void,
-  onDelete: (commentId: string) => void,
   user: User,
   canInteract: boolean
-}> = ({ comment, onReply, onLike, onDelete, user, canInteract }) => {
+}> = ({ comment, onReply, onLike, user, canInteract }) => {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState('');
   
-  const isAuthor = comment.authorId === user.id;
   const isLiked = comment.likedBy?.includes(user.id);
 
   const handleReplySubmit = (e: React.FormEvent) => {
@@ -63,20 +61,7 @@ const CommentItem: React.FC<{
         <div className="flex-1 bg-slate-50 p-3 rounded-xl relative">
           <div className="flex justify-between items-center mb-1">
             <span className="font-bold text-xs text-slate-800">{comment.authorName}</span>
-            <div className="flex items-center gap-2">
-               <span className="text-[10px] text-slate-400">{comment.createdAt}</span>
-               {isAuthor && (
-                 <button 
-                  onClick={() => onDelete(comment.id)}
-                  className="text-slate-300 hover:text-red-500 opacity-0 group-hover/comment:opacity-100 transition-opacity p-1 rounded-md hover:bg-red-50"
-                  title="Excluir meu comentário"
-                 >
-                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                   </svg>
-                 </button>
-               )}
-            </div>
+            <span className="text-[10px] text-slate-400">{comment.createdAt}</span>
           </div>
           <p className="text-sm text-slate-700">{comment.content}</p>
           <div className="flex items-center gap-4 mt-2">
@@ -124,7 +109,6 @@ const CommentItem: React.FC<{
           comment={reply} 
           onReply={onReply} 
           onLike={onLike} 
-          onDelete={onDelete}
           user={user} 
           canInteract={canInteract} 
         />
@@ -191,9 +175,10 @@ export const FeedView: React.FC<FeedViewProps> = ({ user, onNotify }) => {
   };
 
   const handleDeletePost = (postId: string) => {
-    if (window.confirm('Excluir esta postagem permanentemente?')) {
-      savePosts(posts.filter(p => p.id !== postId));
-      onNotify?.("Postagem removida.");
+    if (window.confirm('Tem certeza que deseja excluir esta postagem?')) {
+      const updatedPosts = posts.filter(post => post.id !== postId);
+      savePosts(updatedPosts);
+      onNotify?.("Postagem removida com sucesso.", "info");
     }
   };
 
@@ -202,7 +187,6 @@ export const FeedView: React.FC<FeedViewProps> = ({ user, onNotify }) => {
       if (post.id === postId) {
         const likedBy = post.likedBy || [];
         const isLiked = likedBy.includes(user.id);
-        if (!isLiked) onNotify?.(`Você curtiu a postagem de ${post.authorName}`);
         return {
           ...post,
           likedBy: isLiked ? likedBy.filter(id => id !== user.id) : [...likedBy, user.id],
@@ -239,33 +223,9 @@ export const FeedView: React.FC<FeedViewProps> = ({ user, onNotify }) => {
     setNewCommentText('');
     setActiveCommentId(null);
     
-    // Notification logic
     if (post) {
       onNotify?.(`${user.name} comentou na postagem de ${post.authorName}`);
     }
-  };
-
-  const handleDeleteComment = (postId: string, commentId: string) => {
-    if (!window.confirm('Deseja excluir seu comentário permanentemente?')) return;
-
-    const filterComments = (comments: Comment[]): Comment[] => {
-      return comments
-        .filter(c => c.id !== commentId)
-        .map(c => ({
-          ...c,
-          replies: c.replies ? filterComments(c.replies) : []
-        }));
-    };
-
-    const updatedPosts = posts.map(post => {
-      if (post.id === postId) {
-        return { ...post, comments: filterComments(post.comments) };
-      }
-      return post;
-    });
-    
-    savePosts(updatedPosts);
-    onNotify?.("Comentário excluído.");
   };
 
   const handleLikeComment = (postId: string, commentId: string) => {
@@ -411,7 +371,8 @@ export const FeedView: React.FC<FeedViewProps> = ({ user, onNotify }) => {
                   {isAuthor && (
                     <button 
                       onClick={() => handleDeletePost(post.id)}
-                      className="p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover/post:opacity-100 transition-all rounded-lg hover:bg-red-50"
+                      title="Excluir postagem"
+                      className="p-2 text-slate-300 hover:text-red-600 opacity-0 group-hover/post:opacity-100 transition-all rounded-lg hover:bg-red-50"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -452,7 +413,6 @@ export const FeedView: React.FC<FeedViewProps> = ({ user, onNotify }) => {
                       canInteract={canInteract}
                       onReply={(cid, content) => handleAddReply(post.id, cid, content)} 
                       onLike={(cid) => handleLikeComment(post.id, cid)}
-                      onDelete={(cid) => handleDeleteComment(post.id, cid)}
                     />
                   ))}
                   
